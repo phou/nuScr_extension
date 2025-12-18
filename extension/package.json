@@ -1,0 +1,102 @@
+{
+  "name": "nuscr-editor-combined",
+  "displayName": "nuScr Editor (v1.2.6)",
+  "description": "",
+  "publisher": "nuScr",
+  "version": "1.2.6",
+  "engines": {
+    "vscode": "^1.70.0"
+  },
+  "icon": "media/icon.png",
+  "readme": "README.md", 
+  "categories": [
+    "Programming Languages"
+  ],
+  "activationEvents": [
+    "onLanguage:nuscr",
+    "onCommand:nuscrEditor.checkCurrent",
+    "onCommand:nuscrEditor.quickActions",
+    "onCommand:nuscrEditor.showRoles",
+    "onCommand:nuscrEditor.openInNuScrLive",
+    "onStartupFinished",
+    "onCommand:nuscrEditor.enumCurrentToOutput",
+    "onCommand:nuscrEditor.fsmForRoleToOutput"
+  ],
+  "main": "./extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "nuscrEditor.checkCurrent",
+        "title": "nuScr Editor: Check protocol syntax"
+      },
+      {
+        "command": "nuscrEditor.parseJson",
+        "title": "nuScr Editor: Parse to JSON / Enum"
+      },
+      {
+        "command": "nuscrEditor.openInNuScrLive",
+        "title": "nuScr Editor: Open in nuScr Live"
+      },
+      {
+        "command": "nuscrEditor.configureNuScr",
+        "title": "nuScr Editor: Configure nuScr binary"
+      },
+      {
+        "command": "nuscrEditor.enumCurrentToOutput",
+        "title": "nuScr Editor: Enumerate roles"
+      },
+      {
+        "command": "nuscrEditor.fsmForRoleToOutput",
+        "title": "nuScr Editor: Projection on CFSM per role"
+      }
+    ],
+    "views": {
+      "explorer": [
+        {
+          "id": "nuScrRolesView",
+          "name": "nuScr Roles"
+        }
+      ]
+    },
+    "configuration": {
+      "type": "object",
+      "properties": {
+        "nuscrEditor.nuscrPath": {
+          "type": "string",
+          "default": "nuscr"
+        },
+        "nuscrEditor.checkOnSave": {
+          "type": "boolean",
+          "default": true
+        },
+        "nuscrEditor.codegenLanguages": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "java"
+          ]
+        },
+        "nuscrEditor.genOutput": {
+          "type": "string",
+          "default": ".nuscr-gen"
+        }
+      }
+    },
+    "languages": [
+      {
+        "id": "nuscr",
+        "aliases": [
+          "nuScr",
+          "NUSCR"
+        ],
+        "extensions": [
+          ".scr",
+          ".nuscr"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ]
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "scopeName": "source.nuscr",
+  "patterns": [
+    {
+      "match": "\\b(module|protocol|role|rec|choice|continue|from|to|type|when)\\b",
+      "name": "keyword.control.nuscr"
+    },
+    {
+      "match": "//.*$",
+      "name": "comment.line.double-slash"
+    },
+    {
+      "match": "\"(\\\\.|[^\\\\\"])*\"",
+      "name": "string.quoted.double"
+    }
+  ]
+}
