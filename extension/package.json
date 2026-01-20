@@ -1,9 +1,16 @@
 {
   "name": "nuscr-editor-combined",
-  "displayName": "nuScr Editor (v1.2.6)",
+  "displayName": "nuScr Editor",
   "description": "",
   "publisher": "nuScr",
-  "version": "1.2.6",
+  "version": "1.2.7",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/phou/nuScr_extension"
+  },
+   "bugs": {
+    "url": "https://github.com/phou/nuScr_extension/issues"
+  },
   "engines": {
     "vscode": "^1.70.0"
   },
@@ -15,9 +22,10 @@
   "activationEvents": [
     "onLanguage:nuscr",
     "onCommand:nuscrEditor.checkCurrent",
-    "onCommand:nuscrEditor.quickActions",
-    "onCommand:nuscrEditor.showRoles",
     "onCommand:nuscrEditor.openInNuScrLive",
+    "onCommand:nuscrEditor.parseJson",
+    "onCommand:nuscrEditor.configureNuScr",
+
     "onStartupFinished",
     "onCommand:nuscrEditor.enumCurrentToOutput",
     "onCommand:nuscrEditor.fsmForRoleToOutput"
@@ -30,12 +38,12 @@
         "title": "nuScr Editor: Check protocol syntax"
       },
       {
-        "command": "nuscrEditor.parseJson",
-        "title": "nuScr Editor: Parse to JSON / Enum"
-      },
-      {
         "command": "nuscrEditor.openInNuScrLive",
         "title": "nuScr Editor: Open in nuScr Live"
+      },
+      {
+        "command": "nuscrEditor.parseJson",
+        "title": "nuScr Editor: Parse to JSON / Enum"
       },
       {
         "command": "nuscrEditor.configureNuScr",
