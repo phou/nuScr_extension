@@ -1,26 +1,26 @@
 {
   "name": "nuscr-editor-combined",
-  "displayName": "nuScr Editor (v1.2.6)",
+  "displayName": "nuScr Editor",
   "description": "",
   "publisher": "nuScr",
-  "version": "1.2.6",
+  "version": "1.2.7",
   "engines": {
     "vscode": "^1.70.0"
   },
   "icon": "media/icon.png",
-  "readme": "README.md", 
+  "readme": "README.md",
   "categories": [
     "Programming Languages"
   ],
   "activationEvents": [
+    "onStartupFinished",
     "onLanguage:nuscr",
     "onCommand:nuscrEditor.checkCurrent",
-    "onCommand:nuscrEditor.quickActions",
     "onCommand:nuscrEditor.showRoles",
     "onCommand:nuscrEditor.openInNuScrLive",
-    "onStartupFinished",
     "onCommand:nuscrEditor.enumCurrentToOutput",
-    "onCommand:nuscrEditor.fsmForRoleToOutput"
+    "onCommand:nuscrEditor.fsmForRoleToOutput",
+    "onCommand:nuscrEditor.quickReload"
   ],
   "main": "./extension.js",
   "contributes": {
@@ -48,6 +48,10 @@
       {
         "command": "nuscrEditor.fsmForRoleToOutput",
         "title": "nuScr Editor: Projection on CFSM per role"
+      },
+      {
+        "command": "nuscrEditor.quickReload",
+        "title": "nuScr Editor: Reload Extension Host"
       }
     ],
     "views": {
