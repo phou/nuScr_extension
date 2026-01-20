@@ -1,5 +1,3 @@
-
-
 global protocol Adder(role C, role S)
 {
   rec Loop {
