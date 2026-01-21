@@ -15,13 +15,15 @@ jobs:
 
     steps:
       # 1. Checkout your repo
-      - uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
       # 2. Clone nuscr
       - name: Clone nuscr
-        run: git clone https://github.com/nuscr/nuscr.git
+        run: |
+          git clone https://github.com/nuscr/nuscr.git
 
-      # 3. Cache opam
+      # 3. Cache opam (OCaml deps)
       - name: Cache opam
         uses: actions/cache@v4
         with:
@@ -30,47 +32,49 @@ jobs:
           restore-keys: |
             opam-windows-${{ env.OCAML_VERSION }}-
 
-      # 4. Cache vcpkg
+      # 4. Cache vcpkg protobuf build
       - name: Cache vcpkg
         uses: actions/cache@v4
         with:
           path: C:\vcpkg\installed
           key: vcpkg-protobuf-windows
 
-      # 5. System tools
+      # 5. Install Windows system tools
       - name: Install system tools
+        shell: powershell
         run: |
-          choco install protoc --version=%PROTOC_VERSION% -y
+          choco install protoc --version=$env:PROTOC_VERSION -y
           choco install pkgconfiglite -y
 
-      # 6. Install protobuf headers + pc file
+      # 6. Install protobuf (headers + protobuf.pc) via vcpkg
       - name: Install protobuf via vcpkg
+        shell: powershell
         run: |
-          if not exist C:\vcpkg (
+          if (-not (Test-Path "C:\vcpkg")) {
             git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
             C:\vcpkg\bootstrap-vcpkg.bat
-          )
+          }
           C:\vcpkg\vcpkg.exe install protobuf:x64-windows
 
-      # 7. Expose protobuf.pc
+      # 7. Expose protobuf.pc to pkg-config
       - name: Configure PKG_CONFIG_PATH
         shell: powershell
         run: |
           echo "PKG_CONFIG_PATH=C:\vcpkg\installed\x64-windows\lib\pkgconfig" >> $env:GITHUB_ENV
 
-      # 8. OCaml toolchain
+      # 8. Set up OCaml (compatible with nuscr)
       - name: Set up OCaml
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: ${{ env.OCAML_VERSION }}
 
-      # 9. PIN BROKEN DEPENDENCY (THIS IS THE KEY STEP)
-      - name: Pin ocaml-protoc-plugin (Windows fix)
+      # 9. PIN ocaml-protoc-plugin (Windows crash fix)
+      - name: Pin ocaml-protoc-plugin
         shell: powershell
         run: |
           opam pin add ocaml-protoc-plugin 6.1.0 -y
 
-      # 10. Install nuscr deps
+      # 10. Install nuscr dependencies ONLY
       - name: Install nuscr dependencies
         shell: powershell
         run: |
