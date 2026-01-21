@@ -10,14 +10,6 @@ To use this extension, the following requirements must be met:
 
 - **Visual Studio Code v1.70.0 or later**
 
-- **nuScr tool installed locally**  
-  Follow the installation instructions provided in:  
-  `https://github.com/nuscr/nuscr`
-
-- **nuScr must be**:
-  - Available on the system `PATH`, **or**
-  - Explicitly configured via `nuscrEditor.nuscrPath`
-
 ---
 
 ## Features

@@ -27,14 +27,18 @@ const RELEASE_TAG = 'v1.2.7';
 const OWNER = 'phou';
 const REPO = 'nuScr_extension';
 
+/**
+ * Platforms for which prebuilt binaries are provided.
+ */
 function platformId() {
   const p = os.platform();
   const a = os.arch();
+
   if (p === 'darwin' && a === 'arm64') return 'macos-arm64';
   if (p === 'darwin' && a === 'x64') return 'macos-x64';
-  if (p === 'linux') return 'linux-x64';
-  if (p === 'win32') return 'windows-x64.exe';
-  throw new Error(`Unsupported platform: ${p} ${a}`);
+  if (p === 'linux' && a === 'x64') return 'linux-x64';
+
+  throw new Error(`No prebuilt nuScr binary for platform: ${p} ${a}`);
 }
 
 function nuscrAssetName() {
@@ -50,7 +54,7 @@ function cachedNuscrPath(context) {
     context.globalStorageUri.fsPath,
     'nuscr',
     NUSCR_VERSION,
-    platformId().endsWith('.exe') ? 'nuscr.exe' : 'nuscr'
+    'nuscr'
   );
 }
 
@@ -62,20 +66,14 @@ function downloadFile(url, dest) {
   return new Promise((resolve, reject) => {
     const doRequest = (u) => {
       https.get(u, res => {
-        // Handle redirects (GitHub uses 302)
         if (res.statusCode === 301 || res.statusCode === 302) {
           const next = res.headers.location;
-          if (!next) {
-            reject(new Error(`Redirect with no location header`));
-            return;
-          }
-          doRequest(next);
-          return;
+          if (!next) return reject(new Error('Redirect with no location header'));
+          return doRequest(next);
         }
 
         if (res.statusCode !== 200) {
-          reject(new Error(`Download failed: ${res.statusCode}`));
-          return;
+          return reject(new Error(`Download failed: ${res.statusCode}`));
         }
 
         const file = fs.createWriteStream(dest);
@@ -88,16 +86,45 @@ function downloadFile(url, dest) {
   });
 }
 
-
 async function ensureExecutable(file) {
-  if (process.platform !== 'win32') fs.chmodSync(file, 0o755);
+  if (process.platform !== 'win32') {
+    fs.chmodSync(file, 0o755);
+  }
 }
 
+/**
+ * Resolve nuScr binary path.
+ *
+ * - macOS / Linux: auto-download prebuilt binary
+ * - Windows: require user to build locally and configure nuscrEditor.nuscrPath
+ */
 async function getNuscrPath(context, output) {
   const cfg = vscode.workspace.getConfiguration('nuscrEditor');
   const userPath = cfg.get('nuscrPath');
+
+  // Always respect user override
   if (userPath && fs.existsSync(userPath)) return userPath;
 
+  // Windows: explain and stop
+  if (process.platform === 'win32') {
+    const choice = await vscode.window.showErrorMessage(
+      'nuScr: No prebuilt Windows binary is provided.\n\n' +
+      'Please build nuScr locally on Windows (see README for instructions), ' +
+      'then set "nuscrEditor.nuscrPath" to the path of your nuscr.exe.',
+      'Open Settings'
+    );
+
+    if (choice === 'Open Settings') {
+      vscode.commands.executeCommand(
+        'workbench.action.openSettings',
+        'nuscrEditor.nuscrPath'
+      );
+    }
+
+    throw new Error('nuScr not configured on Windows');
+  }
+
+  // macOS / Linux: auto-download
   const target = cachedNuscrPath(context);
   if (fs.existsSync(target)) return target;
 
