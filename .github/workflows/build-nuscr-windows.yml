@@ -9,43 +9,68 @@ jobs:
   build-nuscr-windows:
     runs-on: windows-latest
 
+    env:
+      OCAML_VERSION: "5.1"
+      PROTOC_VERSION: "23.4"
+
     steps:
       # 1. Checkout your repo
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      # 2. Clone nuscr source
+      # 2. Clone nuscr
       - name: Clone nuscr
-        run: |
-          git clone https://github.com/nuscr/nuscr.git
+        run: git clone https://github.com/nuscr/nuscr.git
 
-      # 3. Install system tools (Windows-native)
-      #    IMPORTANT: protoc is pinned to 23.x to avoid ocaml-protoc-plugin crash
-      - name: Install system dependencies
+      # 3. Cache opam
+      - name: Cache opam
+        uses: actions/cache@v4
+        with:
+          path: C:\.opam
+          key: opam-windows-${{ env.OCAML_VERSION }}-${{ hashFiles('nuscr/*.opam') }}
+          restore-keys: |
+            opam-windows-${{ env.OCAML_VERSION }}-
+
+      # 4. Cache vcpkg
+      - name: Cache vcpkg
+        uses: actions/cache@v4
+        with:
+          path: C:\vcpkg\installed
+          key: vcpkg-protobuf-windows
+
+      # 5. System tools
+      - name: Install system tools
         run: |
-          choco install protoc --version=23.4 -y
+          choco install protoc --version=%PROTOC_VERSION% -y
           choco install pkgconfiglite -y
 
-      # 4. Install protobuf headers + protobuf.pc via vcpkg
+      # 6. Install protobuf headers + pc file
       - name: Install protobuf via vcpkg
         run: |
-          git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
-          C:\vcpkg\bootstrap-vcpkg.bat
+          if not exist C:\vcpkg (
+            git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+            C:\vcpkg\bootstrap-vcpkg.bat
+          )
           C:\vcpkg\vcpkg.exe install protobuf:x64-windows
 
-      # 5. Expose protobuf.pc to pkg-config
+      # 7. Expose protobuf.pc
       - name: Configure PKG_CONFIG_PATH
         shell: powershell
         run: |
           echo "PKG_CONFIG_PATH=C:\vcpkg\installed\x64-windows\lib\pkgconfig" >> $env:GITHUB_ENV
 
-      # 6. Set up OCaml toolchain (compatible with nuscr constraints)
+      # 8. OCaml toolchain
       - name: Set up OCaml
         uses: ocaml/setup-ocaml@v3
         with:
-          ocaml-compiler: "5.1"
+          ocaml-compiler: ${{ env.OCAML_VERSION }}
 
-      # 7. Install nuscr dependencies ONLY
+      # 9. PIN BROKEN DEPENDENCY (THIS IS THE KEY STEP)
+      - name: Pin ocaml-protoc-plugin (Windows fix)
+        shell: powershell
+        run: |
+          opam pin add ocaml-protoc-plugin 6.1.0 -y
+
+      # 10. Install nuscr deps
       - name: Install nuscr dependencies
         shell: powershell
         run: |
@@ -54,7 +79,7 @@ jobs:
           opam pin add nuscr . -n
           opam install nuscr --deps-only -y
 
-      # 8. Build nuscr.exe
+      # 11. Build nuscr.exe
       - name: Build nuscr
         shell: powershell
         run: |
@@ -62,7 +87,7 @@ jobs:
           opam env | Invoke-Expression
           dune build bin/nuscr.exe
 
-      # 9. Upload the Windows binary
+      # 12. Upload artifact
       - name: Upload nuscr.exe
         uses: actions/upload-artifact@v4
         with:
