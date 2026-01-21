@@ -12,7 +12,7 @@ jobs:
     timeout-minutes: 30
 
     steps:
-      # 1️⃣ Checkout nuScr source
+      # 1️⃣ Checkout nuScr source (upstream repo)
       - name: Checkout nuScr source
         uses: actions/checkout@v4
         with:
@@ -34,7 +34,13 @@ jobs:
         with:
           ocaml-compiler: 4.14.1
 
-      # 4️⃣ Install nuScr + required OCaml build deps
+      # 4️⃣ Update opam repositories (CRITICAL)
+      - name: Update opam repositories
+        shell: bash
+        run: |
+          opam update
+
+      # 5️⃣ Install nuScr CLI + required OCaml build deps
       - name: Install OCaml dependencies
         working-directory: nuscr-src
         shell: bash
@@ -47,15 +53,14 @@ jobs:
             ppx_deriving_show \
             dune -y
 
-
-      # 5️⃣ Build nuScr CLI (WITH opam env)
+      # 6️⃣ Build nuScr CLI (correct Dune target)
       - name: Build nuScr CLI
         working-directory: nuscr-src
         shell: bash
         run: |
           opam exec -- dune build @install
 
-      # 6️⃣ Prepare Linux binary
+      # 7️⃣ Prepare Linux binary
       - name: Prepare Linux binary
         working-directory: nuscr-src
         shell: bash
@@ -64,7 +69,7 @@ jobs:
           chmod +x nuscr-2.1.1-linux-x64
           ls -l nuscr-2.1.1-linux-x64
 
-      # 7️⃣ Upload to GitHub Release
+      # 8️⃣ Upload Linux binary to GitHub Release
       - name: Upload Linux binary to GitHub Release
         uses: softprops/action-gh-release@v1
         with:
