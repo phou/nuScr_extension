@@ -60,17 +60,34 @@ function ensureDir(dir) {
 
 function downloadFile(url, dest) {
   return new Promise((resolve, reject) => {
-    const file = fs.createWriteStream(dest);
-    https.get(url, res => {
-      if (res.statusCode !== 200) {
-        reject(new Error(`Download failed: ${res.statusCode}`));
-        return;
-      }
-      res.pipe(file);
-      file.on('finish', () => file.close(resolve));
-    }).on('error', reject);
+    const doRequest = (u) => {
+      https.get(u, res => {
+        // Handle redirects (GitHub uses 302)
+        if (res.statusCode === 301 || res.statusCode === 302) {
+          const next = res.headers.location;
+          if (!next) {
+            reject(new Error(`Redirect with no location header`));
+            return;
+          }
+          doRequest(next);
+          return;
+        }
+
+        if (res.statusCode !== 200) {
+          reject(new Error(`Download failed: ${res.statusCode}`));
+          return;
+        }
+
+        const file = fs.createWriteStream(dest);
+        res.pipe(file);
+        file.on('finish', () => file.close(resolve));
+      }).on('error', reject);
+    };
+
+    doRequest(url);
   });
 }
+
 
 async function ensureExecutable(file) {
   if (process.platform !== 'win32') fs.chmodSync(file, 0o755);
