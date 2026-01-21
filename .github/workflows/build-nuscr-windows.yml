@@ -42,7 +42,8 @@ jobs:
         working-directory: nuscr-src
         shell: bash
         run: |
-          dune build src/nuscr.exe
+          opam exec -- dune build src/nuscr.exe
+
 
       # 5️⃣ Prepare Windows binary
       - name: Prepare Windows binary
