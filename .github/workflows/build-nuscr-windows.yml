@@ -1,0 +1,53 @@
+name: Build nuScr — Windows
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  build-windows:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout nuscr source
+        uses: actions/checkout@v4
+        with:
+          repository: nuscr/nuscr
+          path: nuscr-src
+
+      - name: Install system dependencies
+        run: |
+          sudo apt update
+          sudo apt install -y opam mingw-w64 build-essential pkg-config
+
+      - name: Setup opam
+        run: |
+          opam init -y --disable-sandboxing
+          opam switch create nuscr-win ocaml.4.14.1+mingw64 || opam switch set nuscr-win
+          eval "$(opam env)"
+
+      - name: Install OCaml dependencies
+        working-directory: nuscr-src
+        run: |
+          eval "$(opam env)"
+          opam install . --deps-only -y
+
+      - name: Build nuScr (Windows)
+        working-directory: nuscr-src
+        run: |
+          eval "$(opam env)"
+          dune build
+
+      - name: Prepare Windows binary
+        working-directory: nuscr-src
+        run: |
+          cp _build/default/src/nuscr.exe nuscr-1.0.0-windows-x64.exe
+
+      - name: Upload binary to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: nuscr-src/nuscr-1.0.0-windows-x64.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
