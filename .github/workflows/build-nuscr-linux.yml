@@ -43,10 +43,10 @@ jobs:
           opam install \
             ocaml-protoc-plugin \
             sedlex \
-            sedlex.ppx \
             ppx_deriving \
-            ppx_deriving.show \
+            ppx_deriving_show \
             dune -y
+
 
       # 5️⃣ Build nuScr CLI (WITH opam env)
       - name: Build nuScr CLI
