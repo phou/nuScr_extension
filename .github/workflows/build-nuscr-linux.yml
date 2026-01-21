@@ -72,6 +72,9 @@ jobs:
       - name: Upload Linux binary to GitHub Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: v1.2.7
           files: nuscr-src/nuscr-2.1.1-linux-x64
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+         
+
