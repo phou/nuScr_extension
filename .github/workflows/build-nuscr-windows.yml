@@ -1,4 +1,4 @@
-name: Build nuScr — Windows
+name: Build nuScr — Windows 
 
 on:
   workflow_dispatch:
@@ -12,32 +12,32 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      # 1️⃣ Checkout nuScr source
+      # 1️⃣ Checkout nuScr source (upstream)
       - name: Checkout nuScr source
         uses: actions/checkout@v4
         with:
           repository: nuscr/nuscr
           path: nuscr-src
 
-      # 2️⃣ Setup OCaml + opam (OFFICIAL, FIXES PATH ISSUES)
+      # 2️⃣ Setup OCaml + opam (official, fixes PATH issues)
       - name: Setup OCaml
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: 4.14.1
 
-      # 3️⃣ Install nuScr dependencies
-      - name: Install nuScr dependencies
+      # 3️⃣ Install ONLY nuScr CLI dependencies (skip nuscr-web)
+      - name: Install nuScr CLI dependencies
         working-directory: nuscr-src
         shell: bash
         run: |
-          opam install . --deps-only -y
+          opam install nuscr --deps-only -y
 
-      # 4️⃣ Build nuScr (native Windows)
-      - name: Build nuScr
+      # 4️⃣ Build ONLY the CLI binary
+      - name: Build nuScr CLI
         working-directory: nuscr-src
         shell: bash
         run: |
-          dune build
+          dune build src/nuscr.exe
 
       # 5️⃣ Prepare Windows binary
       - name: Prepare Windows binary
@@ -46,8 +46,9 @@ jobs:
         run: |
           ls -l _build/default/src
           cp _build/default/src/nuscr.exe nuscr-1.0.0-windows-x64.exe
+          ls -l nuscr-1.0.0-windows-x64.exe
 
-      # 6️⃣ Upload to GitHub Release
+      # 6️⃣ Upload binary to GitHub Release for the tag
       - name: Upload Windows binary to GitHub Release
         uses: softprops/action-gh-release@v1
         with:
