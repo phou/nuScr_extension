@@ -10,16 +10,25 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - name: Checkout current repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
       - name: Clone nuscr
-        run: |
-          git clone https://github.com/nuscr/nuscr.git
+        run: git clone https://github.com/nuscr/nuscr.git
 
-      - name: Install system dependencies
+      - name: Install system tools
         run: |
-          choco install protoc pkgconfiglite -y
+          choco install pkgconfiglite -y
+
+      - name: Install protobuf via vcpkg
+        run: |
+          git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
+          C:\vcpkg\bootstrap-vcpkg.bat
+          C:\vcpkg\vcpkg.exe install protobuf:x64-windows
+
+      - name: Configure pkg-config
+        shell: powershell
+        run: |
+          echo "PKG_CONFIG_PATH=C:\vcpkg\installed\x64-windows\lib\pkgconfig" >> $env:GITHUB_ENV
 
       - name: Set up OCaml
         uses: ocaml/setup-ocaml@v3
