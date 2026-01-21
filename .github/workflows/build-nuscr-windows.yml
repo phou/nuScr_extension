@@ -15,26 +15,35 @@ jobs:
       - name: Clone nuscr
         run: git clone https://github.com/nuscr/nuscr.git
 
-      - name: Install system tools
+      # 1️⃣ protoc on PATH
+      - name: Install protoc
+        run: |
+          choco install protoc -y
+
+      # 2️⃣ pkg-config on PATH
+      - name: Install pkg-config
         run: |
           choco install pkgconfiglite -y
 
-      - name: Install protobuf via vcpkg
+      # 3️⃣ protobuf.pc via vcpkg
+      - name: Install protobuf (pkg-config metadata)
         run: |
           git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
           C:\vcpkg\bootstrap-vcpkg.bat
           C:\vcpkg\vcpkg.exe install protobuf:x64-windows
 
-      - name: Configure pkg-config
+      - name: Configure PKG_CONFIG_PATH
         shell: powershell
         run: |
           echo "PKG_CONFIG_PATH=C:\vcpkg\installed\x64-windows\lib\pkgconfig" >> $env:GITHUB_ENV
 
+      # 4️⃣ OCaml toolchain
       - name: Set up OCaml
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: "5.1"
 
+      # 5️⃣ Install deps (now protoc + pkg-config both work)
       - name: Install nuscr dependencies
         shell: powershell
         run: |
@@ -43,6 +52,7 @@ jobs:
           opam pin add nuscr . -n
           opam install nuscr --deps-only -y
 
+      # 6️⃣ Build
       - name: Build nuscr
         shell: powershell
         run: |
