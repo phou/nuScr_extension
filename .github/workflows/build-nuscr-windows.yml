@@ -1,0 +1,38 @@
+name: Build Windows binary
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+
+      - name: Set up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.1"
+
+      - name: Install dependencies
+        run: |
+          opam update
+          opam install . --deps-only -y
+
+      - name: Build nuscr
+        run: |
+          dune build
+
+      - name: Locate executable
+        run: |
+          Get-ChildItem -Recurse -Filter nuscr.exe
+
+      - name: Upload Windows binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuscr-windows
+          path: _build/default/bin/nuscr.exe
