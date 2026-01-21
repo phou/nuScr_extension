@@ -1,10 +1,7 @@
 name: Build nuScr — Windows (cross-compile)
 
 on:
-  # Manual trigger from GitHub UI
   workflow_dispatch:
-
-  # Automatic trigger when you push a version tag like v1.2.7
   push:
     tags:
       - "v*"
@@ -15,7 +12,7 @@ jobs:
     timeout-minutes: 60
 
     steps:
-      # 1️⃣ Checkout the nuScr source code (upstream repo)
+      # 1️⃣ Checkout nuScr source
       - name: Checkout nuScr source
         uses: actions/checkout@v4
         with:
@@ -34,46 +31,29 @@ jobs:
             curl \
             ca-certificates
 
-      # 3️⃣ Initialize opam and add mingw repository (CRITICAL FIX)
-      - name: Setup opam with mingw repository
+      # 3️⃣ Initialize opam and add mingw repository
+      - name: Setup opam repositories
         run: |
           opam init -y --disable-sandboxing
           eval "$(opam env)"
 
-          # Add Windows (mingw) compiler repository
+          # Add Windows cross-compilation repo
           opam repo add mingw https://github.com/ocaml/opam-repository-mingw.git
           opam repo update
 
-          # Create Windows cross-compilation switch
-          opam switch create nuscr-win ocaml.4.14.1+mingw64
+      # 4️⃣ Create Windows compiler switch (CORRECT WAY)
+      - name: Create Windows OCaml switch
+        run: |
           eval "$(opam env)"
 
-      # 4️⃣ Install OCaml dependencies for nuScr
+          opam switch create nuscr-win \
+            --packages=ocaml-variants.4.14.1+mingw64
+
+          eval "$(opam env)"
+
+      # 5️⃣ Install nuScr OCaml dependencies
       - name: Install nuScr dependencies
         working-directory: nuscr-src
         run: |
           eval "$(opam env)"
-          opam install . --deps-only -y
-
-      # 5️⃣ Build nuScr for Windows
-      - name: Build nuScr (Windows)
-        working-directory: nuscr-src
-        run: |
-          eval "$(opam env)"
-          dune build
-
-      # 6️⃣ Prepare the Windows binary
-      - name: Prepare Windows binary
-        working-directory: nuscr-src
-        run: |
-          ls -l _build/default/src
-          cp _build/default/src/nuscr.exe nuscr-1.0.0-windows-x64.exe
-          ls -l nuscr-1.0.0-windows-x64.exe
-
-      # 7️⃣ Upload the binary to the GitHub Release for the tag
-      - name: Upload Windows binary to GitHub Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: nuscr-src/nuscr-1.0.0-windows-x64.exe
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          opam install . --deps-
