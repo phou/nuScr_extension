@@ -34,15 +34,21 @@ jobs:
         with:
           ocaml-compiler: 4.14.1
 
-      # 4️⃣ Install nuScr CLI dependencies
-      - name: Install nuScr CLI dependencies
+      # 4️⃣ Install nuScr + required OCaml build deps
+      - name: Install OCaml dependencies
         working-directory: nuscr-src
         shell: bash
         run: |
           opam install nuscr --deps-only -y
-          opam install dune -y
+          opam install \
+            ocaml-protoc-plugin \
+            sedlex \
+            sedlex.ppx \
+            ppx_deriving \
+            ppx_deriving.show \
+            dune -y
 
-      # 5️⃣ Build nuScr CLI
+      # 5️⃣ Build nuScr CLI (WITH opam env)
       - name: Build nuScr CLI
         working-directory: nuscr-src
         shell: bash
