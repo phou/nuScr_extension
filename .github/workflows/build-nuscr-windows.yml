@@ -19,44 +19,35 @@ jobs:
           repository: nuscr/nuscr
           path: nuscr-src
 
-      # 2️⃣ Install opam via winget
-      - name: Install opam
-        run: |
-          winget install --id OCaml.opam --source winget --accept-package-agreements --accept-source-agreements
+      # 2️⃣ Setup OCaml + opam (OFFICIAL, FIXES PATH ISSUES)
+      - name: Setup OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 4.14.1
 
-      # 3️⃣ Initialize opam
-      - name: Setup opam
-        shell: pwsh
-        run: |
-          opam init -y
-          opam switch create nuscr ocaml.4.14.1
-          opam env
-
-      # 4️⃣ Install nuScr dependencies
+      # 3️⃣ Install nuScr dependencies
       - name: Install nuScr dependencies
-        shell: pwsh
         working-directory: nuscr-src
+        shell: bash
         run: |
-          opam env
           opam install . --deps-only -y
 
-      # 5️⃣ Build nuScr (native Windows)
+      # 4️⃣ Build nuScr (native Windows)
       - name: Build nuScr
-        shell: pwsh
         working-directory: nuscr-src
+        shell: bash
         run: |
-          opam env
           dune build
 
-      # 6️⃣ Prepare Windows binary
+      # 5️⃣ Prepare Windows binary
       - name: Prepare Windows binary
-        shell: pwsh
         working-directory: nuscr-src
+        shell: bash
         run: |
-          Copy-Item _build\default\src\nuscr.exe nuscr-1.0.0-windows-x64.exe
-          Get-Item nuscr-1.0.0-windows-x64.exe
+          ls -l _build/default/src
+          cp _build/default/src/nuscr.exe nuscr-1.0.0-windows-x64.exe
 
-      # 7️⃣ Upload to GitHub Release
+      # 6️⃣ Upload to GitHub Release
       - name: Upload Windows binary to GitHub Release
         uses: softprops/action-gh-release@v1
         with:
