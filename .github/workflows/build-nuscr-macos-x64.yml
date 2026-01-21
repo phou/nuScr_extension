@@ -1,0 +1,46 @@
+name: Build nuScr (macOS x64)
+
+on:
+  workflow_dispatch:
+  push:
+    tags:
+      - "nuscr-*"
+  pull_request:
+
+jobs:
+  build-nuscr-macos-x64:
+    runs-on: macos-13   # Intel macOS runner
+
+    steps:
+      - name: Checkout extension repo
+        uses: actions/checkout@v4
+
+      - name: Install OCaml toolchain
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: "5.1.1"
+
+      - name: Install build dependencies
+        run: |
+          opam update
+          opam install dune menhir conf-protoc conf-pkg-config -y
+
+      - name: Clone nuScr
+        run: |
+          git clone https://github.com/nuscr/nuscr.git
+
+      - name: Build nuScr (macOS x64)
+        run: |
+          cd nuscr
+          dune build
+
+      - name: Verify binary architecture
+        run: |
+          file nuscr/_build/default/bin/nuscr
+          nuscr/_build/default/bin/nuscr --help
+
+      - name: Upload nuScr macOS x64 binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuscr-macos-x64
+          path: nuscr/_build/default/bin/nuscr
