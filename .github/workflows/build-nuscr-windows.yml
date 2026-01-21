@@ -23,14 +23,17 @@ jobs:
           ocaml-compiler: "5.1"
 
       - name: Install nuscr dependencies
+        shell: powershell
         run: |
           cd nuscr
           opam update
           opam install nuscr --deps-only -y
 
       - name: Build nuscr
+        shell: powershell
         run: |
           cd nuscr
+          opam env --switch=default --set-switch | Invoke-Expression
           dune build bin/nuscr.exe
 
       - name: Upload nuscr.exe
