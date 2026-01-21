@@ -1,4 +1,4 @@
-name: Build nuScr — Windows (cross-compile)
+name: Build nuScr — Windows
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   build-windows:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     timeout-minutes: 60
 
     steps:
@@ -19,41 +19,47 @@ jobs:
           repository: nuscr/nuscr
           path: nuscr-src
 
-      # 2️⃣ Install system dependencies
-      - name: Install system dependencies
+      # 2️⃣ Install opam via winget
+      - name: Install opam
         run: |
-          sudo apt update
-          sudo apt install -y \
-            opam \
-            mingw-w64 \
-            build-essential \
-            pkg-config \
-            curl \
-            ca-certificates
+          winget install --id OCaml.opam --source winget --accept-package-agreements --accept-source-agreements
 
-      # 3️⃣ Initialize opam and add mingw repository
-      - name: Setup opam repositories
+      # 3️⃣ Initialize opam
+      - name: Setup opam
+        shell: pwsh
         run: |
-          opam init -y --disable-sandboxing
-          eval "$(opam env)"
+          opam init -y
+          opam switch create nuscr ocaml.4.14.1
+          opam env
 
-          # Add Windows cross-compilation repo
-          opam repo add mingw https://github.com/ocaml/opam-repository-mingw.git
-          opam repo update
-
-      # 4️⃣ Create Windows compiler switch (CORRECT WAY)
-      - name: Create Windows OCaml switch
-        run: |
-          eval "$(opam env)"
-
-          opam switch create nuscr-win \
-            --packages=ocaml-variants.4.14.1+mingw64
-
-          eval "$(opam env)"
-
-      # 5️⃣ Install nuScr OCaml dependencies
+      # 4️⃣ Install nuScr dependencies
       - name: Install nuScr dependencies
+        shell: pwsh
         working-directory: nuscr-src
         run: |
-          eval "$(opam env)"
-          opam install . --deps-
+          opam env
+          opam install . --deps-only -y
+
+      # 5️⃣ Build nuScr (native Windows)
+      - name: Build nuScr
+        shell: pwsh
+        working-directory: nuscr-src
+        run: |
+          opam env
+          dune build
+
+      # 6️⃣ Prepare Windows binary
+      - name: Prepare Windows binary
+        shell: pwsh
+        working-directory: nuscr-src
+        run: |
+          Copy-Item _build\default\src\nuscr.exe nuscr-1.0.0-windows-x64.exe
+          Get-Item nuscr-1.0.0-windows-x64.exe
+
+      # 7️⃣ Upload to GitHub Release
+      - name: Upload Windows binary to GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: nuscr-src/nuscr-1.0.0-windows-x64.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
