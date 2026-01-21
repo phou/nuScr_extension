@@ -10,40 +10,42 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      - uses: actions/checkout@v4
+      # 1. Checkout your repo
+      - name: Checkout repository
+        uses: actions/checkout@v4
 
+      # 2. Clone nuscr source
       - name: Clone nuscr
-        run: git clone https://github.com/nuscr/nuscr.git
-
-      # 1️⃣ protoc on PATH
-      - name: Install protoc
         run: |
-          choco install protoc -y
+          git clone https://github.com/nuscr/nuscr.git
 
-      # 2️⃣ pkg-config on PATH
-      - name: Install pkg-config
+      # 3. Install system tools (Windows-native)
+      #    IMPORTANT: protoc is pinned to 23.x to avoid ocaml-protoc-plugin crash
+      - name: Install system dependencies
         run: |
+          choco install protoc --version=23.4 -y
           choco install pkgconfiglite -y
 
-      # 3️⃣ protobuf.pc via vcpkg
-      - name: Install protobuf (pkg-config metadata)
+      # 4. Install protobuf headers + protobuf.pc via vcpkg
+      - name: Install protobuf via vcpkg
         run: |
           git clone https://github.com/microsoft/vcpkg.git C:\vcpkg
           C:\vcpkg\bootstrap-vcpkg.bat
           C:\vcpkg\vcpkg.exe install protobuf:x64-windows
 
+      # 5. Expose protobuf.pc to pkg-config
       - name: Configure PKG_CONFIG_PATH
         shell: powershell
         run: |
           echo "PKG_CONFIG_PATH=C:\vcpkg\installed\x64-windows\lib\pkgconfig" >> $env:GITHUB_ENV
 
-      # 4️⃣ OCaml toolchain
+      # 6. Set up OCaml toolchain (compatible with nuscr constraints)
       - name: Set up OCaml
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: "5.1"
 
-      # 5️⃣ Install deps (now protoc + pkg-config both work)
+      # 7. Install nuscr dependencies ONLY
       - name: Install nuscr dependencies
         shell: powershell
         run: |
@@ -52,7 +54,7 @@ jobs:
           opam pin add nuscr . -n
           opam install nuscr --deps-only -y
 
-      # 6️⃣ Build
+      # 8. Build nuscr.exe
       - name: Build nuscr
         shell: powershell
         run: |
@@ -60,6 +62,7 @@ jobs:
           opam env | Invoke-Expression
           dune build bin/nuscr.exe
 
+      # 9. Upload the Windows binary
       - name: Upload nuscr.exe
         uses: actions/upload-artifact@v4
         with:
