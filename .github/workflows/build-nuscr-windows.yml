@@ -17,9 +17,9 @@ jobs:
         run: |
           git clone https://github.com/nuscr/nuscr.git
 
-      - name: Install protoc
+      - name: Install system dependencies
         run: |
-          choco install protoc -y
+          choco install protoc pkgconfiglite -y
 
       - name: Set up OCaml
         uses: ocaml/setup-ocaml@v3
