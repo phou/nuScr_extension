@@ -27,13 +27,14 @@ jobs:
         run: |
           cd nuscr
           opam update
+          opam pin add nuscr . -n
           opam install nuscr --deps-only -y
 
       - name: Build nuscr
         shell: powershell
         run: |
           cd nuscr
-          opam env --switch=default --set-switch | Invoke-Expression
+          opam env | Invoke-Expression
           dune build bin/nuscr.exe
 
       - name: Upload nuscr.exe
