@@ -32,6 +32,11 @@ jobs:
         run: |
           opam install nuscr --deps-only -y
 
+      - name: Install dune
+        shell: bash
+        run: |
+          opam install dune -y
+
       # 4️⃣ Build ONLY the CLI binary
       - name: Build nuScr CLI
         working-directory: nuscr-src
