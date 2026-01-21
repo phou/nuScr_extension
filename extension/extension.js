@@ -22,7 +22,7 @@ const https = require('https');
 /*************************
  * nuScr binary download
  *************************/
-const NUSCR_VERSION = '1.0.0';
+const NUSCR_VERSION = '2.1.1';
 const RELEASE_TAG = 'v1.2.7';
 const OWNER = 'phou';
 const REPO = 'nuScr_extension';
