@@ -50,7 +50,6 @@ jobs:
             ocaml-protoc-plugin \
             sedlex \
             ppx_deriving \
-            ppx_deriving_show \
             dune -y
 
       # 6️⃣ Build nuScr CLI (correct Dune target)
