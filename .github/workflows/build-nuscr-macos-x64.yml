@@ -23,7 +23,7 @@ jobs:
         run: |
           git clone https://github.com/nuscr/nuscr.git
 
-      - name: Install nuScr dependencies (CLI only)
+      - name: Install nuScr CLI dependencies only
         run: |
           eval $(opam env)
           cd nuscr
@@ -31,11 +31,11 @@ jobs:
           opam pin add nuscr . -n
           opam install nuscr --deps-only -y
 
-      - name: Build nuScr (macOS x64)
+      - name: Build nuScr CLI (macOS x64)
         run: |
           eval $(opam env)
           cd nuscr
-          dune build
+          dune build bin/nuscr
 
       - name: Verify nuScr binary
         run: |
