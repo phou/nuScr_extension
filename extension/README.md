@@ -48,7 +48,7 @@ To use **nuScr Editor** on Windows:
 
    Follow the build instructions in the nuScr repository:
 
-   https://github.com/nuscr/nuscr
+   `https://github.com/nuscr/nuscr`
 
 2. **Configure the extension to use your local binary**
 
@@ -191,6 +191,6 @@ Please build `nuScr` locally and set `nuscrEditor.nuscrPath` as described above.
 
 ## Links
 
-- nuScr project: https://github.com/nuscr/nuscr  
-- nuScr Live: https://nuscr.dev/nuscr/  
-- Issues & feedback: https://github.com/phou/nuScr_extension/issues  
+- nuScr project: `https://github.com/nuscr/nuscr`  
+- nuScr Live: `https://nuscr.dev/nuscr/`  
+- Issues & feedback: `https://github.com/phou/nuScr_extension/issues`  
