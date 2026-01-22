@@ -9,13 +9,13 @@ on:
 
 jobs:
   build-nuscr-macos-x64:
-    runs-on: macos-13   # Intel macOS runner
+    runs-on: macos-14-large   # ✅ Intel macOS runner
 
     steps:
       - name: Checkout extension repo
         uses: actions/checkout@v4
 
-      - name: Install OCaml toolchain
+      - name: Set up OCaml
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: "5.1.1"
