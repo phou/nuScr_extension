@@ -9,18 +9,16 @@ jobs:
     runs-on: windows-latest
 
     steps:
-      # 1. Checkout the packaging repo (this repo)
-      - name: Checkout packaging repo
-        uses: actions/checkout@v4
+      # 1. Checkout packaging repo
+      - uses: actions/checkout@v4
 
-      # 2. Checkout nuscr into a subdirectory
+      # 2. Checkout nuscr
       - name: Checkout nuscr
         uses: actions/checkout@v4
         with:
           repository: nuscr/nuscr
+          ref: develop
           path: nuscr
-          # optionally pin a version:
-          # ref: v0.3.2
 
       # 3. Set up OCaml + opam
       - name: Set up OCaml
@@ -30,26 +28,28 @@ jobs:
 
       # 4. Build nuscr
       - name: Build nuscr
-        working-directory: nuscr
         shell: pwsh
+        working-directory: nuscr
         run: |
-          # Make sure opam env is active
-          opam env --switch=default --set-switch | Invoke-Expression
+          # Create and activate switch
+          opam switch create nuscr-switch ocaml.5.1.1
+          (& opam env) -split '\r?\n' | ForEach-Object { Invoke-Expression $_ }
 
-          # Pin the local repo so internal packages resolve
-          opam pin add nuscr . -y --no-action
+          # Pin ALL local packages (CRITICAL)
+          opam pin add . --recursive -y
 
           # Install dependencies
           opam install . --deps-only -y
 
-          # Ensure dune is available
+          # Install dune and refresh PATH
           opam install dune -y
+          (& opam env) -split '\r?\n' | ForEach-Object { Invoke-Expression $_ }
 
           # Build
           dune build
 
-      # 5. Package the Windows binary
-      - name: Package binary
+      # 5. Package binary
+      - name: Package Windows binary
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Force -Path package
