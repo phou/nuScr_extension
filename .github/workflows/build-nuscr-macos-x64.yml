@@ -35,7 +35,7 @@ jobs:
         run: |
           eval $(opam env)
           cd nuscr
-          dune build @bin
+          dune build bin/main.exe
 
       - name: Verify nuScr binary
         run: |
