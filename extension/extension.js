@@ -1,17 +1,6 @@
 /*************************
- * Helpers
+ * Imports
  *************************/
-function sanitizeAt(s){ return (''+(s||'')).replace(/@/g,''); }
-
-function buildSel(role, proto){
-  const rstr = '' + (role || '');
-  if (rstr.includes('@')) {
-    const parts = rstr.split('@').filter(Boolean);
-    return sanitizeAt(parts[0]) + '@' + sanitizeAt(parts[1] || proto);
-  }
-  return sanitizeAt(role) + '@' + sanitizeAt(proto);
-}
-
 const vscode = require('vscode');
 const cp = require('child_process');
 const fs = require('fs');
@@ -20,16 +9,58 @@ const path = require('path');
 const https = require('https');
 
 /*************************
- * nuScr binary download
+ * Constants
  *************************/
 const NUSCR_VERSION = '2.1.1';
 const RELEASE_TAG = 'v1.2.7';
 const OWNER = 'phou';
 const REPO = 'nuScr_extension';
 
-/**
- * Platforms for which prebuilt binaries are provided.
- */
+/*************************
+ * Helpers
+ *************************/
+function ensureDir(dir) {
+  fs.mkdirSync(dir, { recursive: true });
+}
+
+function ensureExecutable(file) {
+  if (process.platform !== 'win32') {
+    fs.chmodSync(file, 0o755);
+  }
+}
+
+function downloadFile(url, dest) {
+  return new Promise((resolve, reject) => {
+    const request = u => {
+      https.get(u, res => {
+        if (res.statusCode === 301 || res.statusCode === 302) {
+          return request(res.headers.location);
+        }
+        if (res.statusCode !== 200) {
+          return reject(new Error(`Download failed: ${res.statusCode}`));
+        }
+        const file = fs.createWriteStream(dest);
+        res.pipe(file);
+        file.on('finish', () => file.close(resolve));
+      }).on('error', reject);
+    };
+    request(url);
+  });
+}
+
+function unzip(zipPath, destDir) {
+  return new Promise((resolve, reject) => {
+    cp.execFile(
+      'unzip',
+      ['-o', zipPath, '-d', destDir],
+      err => (err ? reject(err) : resolve())
+    );
+  });
+}
+
+/*************************
+ * Platform logic
+ *************************/
 function platformId() {
   const p = os.platform();
   const a = os.arch();
@@ -38,105 +69,85 @@ function platformId() {
   if (p === 'darwin' && a === 'x64') return 'macos-x64';
   if (p === 'linux' && a === 'x64') return 'linux-x64';
 
-  throw new Error(`No prebuilt nuScr binary for platform: ${p} ${a}`);
+  throw new Error(`Unsupported platform: ${p} ${a}`);
+}
+
+function isZippedPlatform() {
+  return os.platform() === 'darwin' && os.arch() === 'x64';
 }
 
 function nuscrAssetName() {
-  return `nuscr-${NUSCR_VERSION}-${platformId()}`;
+  const base = `nuscr-${NUSCR_VERSION}-${platformId()}`;
+  return isZippedPlatform() ? `${base}.zip` : base;
 }
 
 function nuscrDownloadUrl() {
   return `https://github.com/${OWNER}/${REPO}/releases/download/${RELEASE_TAG}/${nuscrAssetName()}`;
 }
 
-function cachedNuscrPath(context) {
+/*************************
+ * Cache paths
+ *************************/
+function cachedNuscrDir(context) {
   return path.join(
     context.globalStorageUri.fsPath,
     'nuscr',
     NUSCR_VERSION,
-    'nuscr'
+    platformId()
   );
 }
 
-function ensureDir(dir) {
-  fs.mkdirSync(dir, { recursive: true });
+function cachedNuscrPath(context) {
+  return path.join(cachedNuscrDir(context), 'nuscr');
 }
 
-function downloadFile(url, dest) {
-  return new Promise((resolve, reject) => {
-    const doRequest = (u) => {
-      https.get(u, res => {
-        if (res.statusCode === 301 || res.statusCode === 302) {
-          const next = res.headers.location;
-          if (!next) return reject(new Error('Redirect with no location header'));
-          return doRequest(next);
-        }
-
-        if (res.statusCode !== 200) {
-          return reject(new Error(`Download failed: ${res.statusCode}`));
-        }
-
-        const file = fs.createWriteStream(dest);
-        res.pipe(file);
-        file.on('finish', () => file.close(resolve));
-      }).on('error', reject);
-    };
-
-    doRequest(url);
-  });
-}
-
-async function ensureExecutable(file) {
-  if (process.platform !== 'win32') {
-    fs.chmodSync(file, 0o755);
-  }
-}
-
-/**
- * Resolve nuScr binary path.
- *
- * - macOS / Linux: auto-download prebuilt binary
- * - Windows: require user to build locally and configure nuscrEditor.nuscrPath
- */
+/*************************
+ * Resolve nuScr binary
+ *************************/
 async function getNuscrPath(context, output) {
   const cfg = vscode.workspace.getConfiguration('nuscrEditor');
   const userPath = cfg.get('nuscrPath');
 
-  // Always respect user override
+  // User override always wins
   if (userPath && fs.existsSync(userPath)) return userPath;
 
-  // Windows: explain and stop
+  // Windows: manual build required
   if (process.platform === 'win32') {
     const choice = await vscode.window.showErrorMessage(
       'nuScr: No prebuilt Windows binary is provided.\n\n' +
-      'Please build nuScr locally on Windows (see README for instructions), ' +
-      'then set "nuscrEditor.nuscrPath" to the path of your nuscr.exe.',
+      'Please build nuScr locally on Windows (see README) and set "nuscrEditor.nuscrPath".',
       'Open Settings'
     );
-
     if (choice === 'Open Settings') {
       vscode.commands.executeCommand(
         'workbench.action.openSettings',
         'nuscrEditor.nuscrPath'
       );
     }
-
     throw new Error('nuScr not configured on Windows');
   }
 
-  // macOS / Linux: auto-download
-  const target = cachedNuscrPath(context);
-  if (fs.existsSync(target)) return target;
+  const dir = cachedNuscrDir(context);
+  const exe = cachedNuscrPath(context);
 
-  ensureDir(path.dirname(target));
+  if (fs.existsSync(exe)) return exe;
+
+  ensureDir(dir);
   output.show(true);
   output.appendLine(`Downloading nuScr ${NUSCR_VERSION}...`);
 
-  await downloadFile(nuscrDownloadUrl(), target);
-  await ensureExecutable(target);
+  const assetPath = path.join(dir, nuscrAssetName());
+  await downloadFile(nuscrDownloadUrl(), assetPath);
 
-  output.appendLine(`nuScr ${NUSCR_VERSION} ready`);
-  return target;
+  if (isZippedPlatform()) {
+    await unzip(assetPath, dir);
+    fs.unlinkSync(assetPath);
+  }
+
+  await ensureExecutable(exe);
+  output.appendLine('nuScr ready');
+
+  return exe;
 }
 
 /*************************
@@ -149,7 +160,6 @@ function runCli(cmd, args) {
         success: !err,
         stdout: stdout || '',
         stderr: stderr || '',
-        err
       });
     });
   });
@@ -166,7 +176,6 @@ function activate(context) {
     return await getNuscrPath(context, output);
   }
 
-  /******** checkCurrent ********/
   context.subscriptions.push(
     vscode.commands.registerCommand('nuscrEditor.checkCurrent', async () => {
       const ed = vscode.window.activeTextEditor;
@@ -174,7 +183,8 @@ function activate(context) {
       await ed.document.save();
 
       const bin = await nuscr();
-      output.clear(); output.show(true);
+      output.clear();
+      output.show(true);
 
       const res = await runCli(bin, [ed.document.uri.fsPath]);
       if (!res.success) {
@@ -187,27 +197,26 @@ function activate(context) {
     })
   );
 
-  /******** parseJson ********/
   context.subscriptions.push(
     vscode.commands.registerCommand('nuscrEditor.parseJson', async () => {
       const ed = vscode.window.activeTextEditor;
       if (!ed) return;
 
       const bin = await nuscr();
-      output.clear(); output.show(true);
+      output.clear();
+      output.show(true);
 
       const res = await runCli(bin, ['--enum', ed.document.uri.fsPath]);
       output.appendLine(res.stdout || res.stderr);
     })
   );
 
-  /******** configureNuScr ********/
   context.subscriptions.push(
     vscode.commands.registerCommand('nuscrEditor.configureNuScr', async () => {
       const cfg = vscode.workspace.getConfiguration('nuscrEditor');
       const current = cfg.get('nuscrPath') || '';
       const value = await vscode.window.showInputBox({
-        prompt: 'Path to nuScr binary (optional override)',
+        prompt: 'Path to nuScr binary',
         value: current
       });
       if (value !== undefined) {
@@ -217,63 +226,10 @@ function activate(context) {
     })
   );
 
-  /******** enumCurrentToOutput ********/
-  context.subscriptions.push(
-    vscode.commands.registerCommand('nuscrEditor.enumCurrentToOutput', async () => {
-      const ed = vscode.window.activeTextEditor;
-      if (!ed) return;
-
-      const bin = await nuscr();
-      output.clear(); output.show(true);
-
-      const res = await runCli(bin, ['--enum', ed.document.uri.fsPath]);
-      output.appendLine(res.stdout || res.stderr);
-    })
-  );
-
-  /******** fsmForRoleToOutput ********/
-  context.subscriptions.push(
-    vscode.commands.registerCommand('nuscrEditor.fsmForRoleToOutput', async () => {
-      const ed = vscode.window.activeTextEditor;
-      if (!ed) return;
-
-      const text = ed.document.getText();
-      const m = text.match(/protocol\s+([A-Za-z0-9_]+)/i);
-      if (!m) {
-        vscode.window.showErrorMessage('Protocol name not found');
-        return;
-      }
-      const proto = m[1];
-
-      const bin = await nuscr();
-      output.clear(); output.show(true);
-
-      const enumRes = await runCli(bin, ['--enum', ed.document.uri.fsPath]);
-      if (!enumRes.success) {
-        output.appendLine(enumRes.stderr);
-        return;
-      }
-
-      const roles = enumRes.stdout
-        .split(/\r?\n/)
-        .map(l => l.trim())
-        .filter(Boolean);
-
-      const role = await vscode.window.showQuickPick(roles);
-      if (!role) return;
-
-      const sel = buildSel(role, proto);
-      const res = await runCli(bin, [`--fsm=${sel}`, ed.document.uri.fsPath]);
-      output.appendLine(res.stdout || res.stderr);
-    })
-  );
-
-  /******** openInNuScrLive ********/
   context.subscriptions.push(
     vscode.commands.registerCommand('nuscrEditor.openInNuScrLive', async () => {
       const ed = vscode.window.activeTextEditor;
       if (!ed) return;
-
       await vscode.env.clipboard.writeText(ed.document.getText());
       await vscode.env.openExternal(vscode.Uri.parse('https://nuscr.dev/nuscr/'));
     })
