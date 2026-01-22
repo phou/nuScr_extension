@@ -1,173 +1,190 @@
 # nuScr Editor
 
-**nuScr Editor** is a Visual Studio Code extension for working with **nuScr protocol specifications**.  
-It integrates the `nuScr` command-line tool to validate protocols, enumerate roles, generate projections, and interact with **nuScr Live** directly from the editor.
+**nuScr Editor** is a Visual Studio Code extension for working with **nuScr protocol specifications**.
+
+It integrates the `nuScr` command-line tool so you can:
+
+- Check protocol validity
+- Explore parsed representations (JSON)
+- Generate CFSM projections
+- Interact with **nuScr Live** directly from the editor
 
 ---
 
 ## Features
 
 - ✅ **Check protocol validity**
+  - Run `nuScr` checks from the Command Palette or via commands bound in your keybindings.
 - 📄 **Enumerate roles / parse to JSON**
+  - Inspect roles and protocol structure as JSON for downstream tooling.
 - 🔁 **Generate CFSM projections per role**
+  - Invoke `nuScr`’s projection commands per role from inside VS Code.
 - 🌐 **Open protocol in nuScr Live**
+  - Open the current protocol in **nuScr Live** in your browser.
 - ⚙️ **Configurable nuScr binary path**
+  - Point the extension at any `nuScr` binary (system-installed, custom build, or wrapper script).
 
-All commands are available from the Command Palette.
-
----
-
-## Requirements
-
-To use this extension, the following requirements must be met:
-
-- **Visual Studio Code v1.70.0 or later**
-
-### Platform requirements
-
-- **macOS / Linux**  
-  A prebuilt `nuScr` binary is downloaded automatically on first use.
-
-- **Windows**  
-  A prebuilt Windows binary is **not currently provided**.  
-  See **Windows Support** below for setup instructions.
+All commands are available from the **Command Palette** (search for `nuScr`).
 
 ---
 
-## Windows Support (Important)
+## Installation
 
-Prebuilt **nuScr** binaries are provided for **macOS** and **Linux** only.
+### 1. Install the extension
 
-Due to upstream **OCaml / protobuf tooling limitations**, a prebuilt **Windows** binary is **not currently distributed** with this extension.
+- Open **Visual Studio Code**
+- Go to **Extensions** (`Ctrl+Shift+X` / `Cmd+Shift+X`)
+- Search for **“nuScr Editor”** (or install from a VSIX built from this repository)
+- Click **Install**
 
-### What Windows users need to do
+> If you’re working from source, you can use `vsce package` / `npm run package` and install the generated `.vsix` via  
+> **Extensions → … → Install from VSIX…**
 
-To use **nuScr Editor** on Windows:
+### 2. Install `nuScr`
 
-1. **Build nuScr locally on Windows**
+The extension is a thin client around the `nuScr` CLI. You need an actual `nuScr` binary somewhere on the system.
 
-   Follow the build instructions in the nuScr repository:
+You have a few options:
 
-   `https://github.com/nuscr/nuscr`
+- **Use a prebuilt binary** (recommended where available)
+- **Install via `opam`**
+- **Build from source** (see the nuScr repo)
 
-2. **Configure the extension to use your local binary**
-
-   Set the following VS Code setting to the path of your built executable:
-
-   ```json
-   {
-     "nuscrEditor.nuscrPath": "C:\\path\\to\\nuscr.exe"
-   }
-   ```
-
-Once configured, **nuScr Editor works correctly on Windows**.
-
-> ⚠️ This limitation affects the **build process only**.  
-> nuScr itself runs correctly on Windows once built.
+See **Platform support** below for what is currently provided.
 
 ---
 
-## Language Support
+## Platform support
 
-The extension activates automatically for the following file types:
+### macOS & Linux
 
-- `.nuscr`
-- `.scr`
+On these platforms you can either:
 
-Language ID: `nuscr`
+- Use a **prebuilt `nuScr` binary** for your architecture (e.g. from the nuScr releases you maintain for:
+  - macOS (Intel)
+  - macOS (Apple Silicon / ARM)
+  - Linux (x86_64))
+- Or install `nuScr` via `opam`:
 
----
+```bash
+opam install nuscr
+```
 
-## Commands
+Then configure the extension (see **Configuration**).
 
-The following commands are available from the  
-**Command Palette** (`Cmd + Shift + P` / `Ctrl + Shift + P`):
+### Windows
 
-- **nuScr Editor: Check protocol syntax**
-- **nuScr Editor: Parse to JSON / Enum**
-- **nuScr Editor: Enumerate roles**
-- **nuScr Editor: Projection on CFSM per role**
-- **nuScr Editor: Open in nuScr Live**
-- **nuScr Editor: Configure nuScr binary**
+At the moment **no prebuilt native Windows `nuScr` binary is distributed**.
 
----
+You have two practical options:
 
-## Usage
+#### Option A — Recommended: use Linux `nuScr` from Windows via WSL2
 
-1. Open a `.nuscr` or `.scr` file
-2. Edit your protocol specification
-3. Use the Command Palette or context menu to:
-   - Validate syntax
-   - Enumerate roles
-   - Generate projections
-   - Open the protocol in nuScr Live
+On Windows you can run the **Linux** `nuScr` binary inside a Linux environment:
 
----
+- **WSL2** (Windows Subsystem for Linux), or
+- A Linux VM / container
 
-## Open in nuScr Live
+Typical setup:
 
-When using **nuScr Editor: Open in nuScr Live**, the extension performs the following steps:
+1. Install **WSL2** with a Linux distribution (e.g. Ubuntu).
+2. Inside WSL2, install `nuScr` (e.g. `opam install nuscr` or from your Linux binary).
+3. Run `nuScr` from a WSL terminal as needed.
 
-1. Copies the current protocol to the system clipboard
-2. Opens the **nuScr Live** webpage in your browser
+If you run VS Code using **Remote – WSL**, the extension can use the Linux `nuScr` inside the WSL environment just like on a normal Linux system (you still configure `nuscrEditor.nuscrPath`, but it points to the Linux binary inside WSL).
 
-### Manual Paste Required
+#### Option B — Advanced: native `nuscr.exe` on Windows
 
-Due to browser security restrictions, the protocol **cannot be pasted automatically**.
+It is currently **non-trivial** to build `nuScr` natively on Windows due to:
 
-### What to do
+- OCaml toolchain specifics,
+- `protoc` / protobuf dependencies,
+- `pkg-config` behaviour on Windows.
 
-- After the browser opens, press:
-  - **Cmd + V** on macOS
-  - **Ctrl + V** on Windows / Linux
+If you do manage to build a working `nuscr.exe` locally, you can still use it:
 
-This behavior is expected and required by modern browser security policies.
+1. Build `nuScr` on Windows (following the upstream docs / your own setup).
+2. Configure:
+
+```jsonc
+{
+  "nuscrEditor.nuscrPath": "C:\\path\\to\\your\\nuscr.exe"
+}
+```
+
+Native Windows is considered **advanced / experimental** at this time.
 
 ---
 
 ## Configuration
 
-The extension provides the following settings:
-
-```json
-{
-  "nuscrEditor.nuscrPath": "nuscr",
-  "nuscrEditor.checkOnSave": true,
-  "nuscrEditor.codegenLanguages": ["java"],
-  "nuscrEditor.genOutput": ".nuscr-gen"
-}
-```
+Open **Settings** → search for “nuScr Editor”, or edit your settings JSON directly.
 
 ### `nuscrEditor.nuscrPath`
 
-Optional override for the `nuScr` binary location.
+Path to the `nuScr` executable (or wrapper script). Examples:
 
-- **Required on Windows**
-- Optional on macOS / Linux
+**macOS / Linux:**
 
-Example:
-
-```json
+```jsonc
 {
   "nuscrEditor.nuscrPath": "/usr/local/bin/nuscr"
 }
 ```
 
-or on Windows:
+**Windows (native binary):**
 
-```json
+```jsonc
 {
-  "nuscrEditor.nuscrPath": "C:\\tools\\nuscr.exe"
+  "nuscrEditor.nuscrPath": "C:\\tools\\nuscr\\nuscr.exe"
 }
 ```
 
+**Windows using WSL wrapper (advanced):**
+
+You can also point this to a small script that forwards to `wsl nuscr` or similar, if that fits your setup.
+
+> The extension assumes that whatever you configure here behaves like the `nuScr` CLI (supports `--help`, exits with non-zero on error, etc.).
+
 ---
 
-## Known Limitations
+## Usage
 
-- Native Windows binaries are not distributed.
-- Windows users must build `nuScr` locally.
-- This is due to upstream tooling constraints, not a runtime limitation.
+1. Open a `.nuscr` file in VS Code.
+2. Open the **Command Palette** and type `nuScr` to see available commands, e.g.:
+   - `nuScr: Check protocol`
+   - `nuScr: Enumerate roles`
+   - `nuScr: Generate CFSM projections`
+   - `nuScr: Open in nuScr Live`
+3. Run the desired command.
+4. Inspect results:
+   - Diagnostics appear in the **Problems** panel and/or as inline squiggles.
+   - Additional output goes to the **nuScr** output channel.
+
+---
+
+## Windows support (summary)
+
+- ✅ **Works** when:
+  - You run VS Code against a Linux environment (WSL2 / container) with `nuScr` installed, **or**
+  - You have a working native `nuscr.exe` and point `nuscrEditor.nuscrPath` at it.
+- ❌ **Not currently provided**:
+  - An official, prebuilt `nuscr.exe` as part of this extension.
+
+If you just want a reliable setup, we recommend:
+
+> **Windows + WSL2 + Linux `nuScr`**  
+> (or using this extension on macOS / Linux where prebuilt binaries are available).
+
+---
+
+## Known limitations
+
+- There is **no official prebuilt Windows `nuScr` binary** at this time.
+- Windows users must either:
+  - Build `nuScr` locally and point the extension at it, **or**
+  - Use the Linux binary via WSL2 / a Linux environment.
+- This is primarily due to **upstream tooling constraints** (OCaml, protobuf, `pkg-config` on Windows), not a fundamental runtime limitation of `nuScr` itself.
 
 ---
 
@@ -175,22 +192,38 @@ or on Windows:
 
 ### “No prebuilt Windows binary is provided”
 
-This message is expected on Windows.
+This is expected on Windows.
 
-Please build `nuScr` locally and set `nuscrEditor.nuscrPath` as described above.
-
----
+- Either:
+  - Build `nuScr` locally and configure `nuscrEditor.nuscrPath`, **or**
+  - Use WSL2 / Linux and run the extension there.
 
 ### “nuScr check failed”
 
-- Ensure `nuscrEditor.nuscrPath` points to a valid executable
-- Run `nuscr --help` manually to confirm it works
-- Check the **nuScr** output channel for details
+- Ensure `nuscrEditor.nuscrPath` points to a valid executable.
+- Run `nuscr --help` manually in a terminal to confirm it works and is on PATH.
+- Check the **nuScr** output channel in VS Code for detailed error messages.
+
+### Nothing happens / commands are missing
+
+- Make sure the extension is enabled for your workspace.
+- Confirm you are opening a file type that the extension activates on (e.g. your `.nuscr` files).
+- Open the **Developer Tools** in VS Code and look for extension errors.
+
+---
+
+## Contributing
+
+Issues, feature requests and pull requests are welcome:
+
+- Use GitHub issues for bugs and suggestions.
+- If you’d like to contribute a feature, please open an issue or discussion first so we can align on scope and UX.
 
 ---
 
 ## Links
 
-- nuScr project: `https://github.com/nuscr/nuscr`  
-- nuScr Live: `https://nuscr.dev/nuscr/`  
-- Issues & feedback: `https://github.com/phou/nuScr_extension/issues`  
+- nuScr project: https://github.com/nuscr/nuscr  
+- nuScr Live: https://nuscr.dev/nuscr/  
+- nuScr Editor extension repo: https://github.com/phou/nuScr_extension  
+
