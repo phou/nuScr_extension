@@ -19,14 +19,16 @@ jobs:
         with:
           ocaml-compiler: "5.1.1"
 
-      - name: Install build dependencies
-        run: |
-          opam update
-          opam install dune menhir conf-protoc conf-pkg-config -y
-
       - name: Clone nuScr
         run: |
           git clone https://github.com/nuscr/nuscr.git
+
+      - name: Install nuScr dependencies
+        run: |
+          eval $(opam env)
+          cd nuscr
+          opam update
+          opam install . --deps-only -y
 
       - name: Build nuScr (macOS x64)
         run: |
