@@ -25,7 +25,7 @@ jobs:
         with:
           ocaml-compiler: '5.3.0'
 
-      # NEW: install protoc so conf-protoc can succeed
+      # Install protoc so conf-protoc can succeed
       - name: Install protoc (Protocol Buffers compiler)
         shell: pwsh
         run: |
@@ -35,19 +35,22 @@ jobs:
         shell: pwsh
         working-directory: nuscr
         run: |
-          # Activate opam environment for this shell
+          # Activate opam env for this shell
           (& opam env) -split '\r?\n' | ForEach-Object { Invoke-Expression $_ }
 
-          # Pin only the 'nuscr' package to this directory (ignore nuscr-web)
+          # IMPORTANT: make Cygwin's pkg-config visible (installed by conf-pkg-config)
+          $env:PATH = "C:\cygwin\bin;$env:PATH"
+
+          # Pin only the 'nuscr' package to this checkout
           opam pin add nuscr . --with-version=dev -y
 
-          # Install nuscr (installs deps and runs dune build -p nuscr @install)
+          # Install nuscr (installs deps + runs dune build -p nuscr @install)
           opam install nuscr -y
 
-          # Refresh env so installed bin/ is on PATH
+          # Refresh env so installed bin dir is in PATH
           (& opam env) -split '\r?\n' | ForEach-Object { Invoke-Expression $_ }
 
-          # Copy the installed Windows binary into the main workspace
+          # Copy resulting Windows binary out of the switch
           Copy-Item "$env:OPAM_SWITCH_PREFIX\bin\nuscr.exe" `
                     "$env:GITHUB_WORKSPACE\nuscr-windows.exe"
 
