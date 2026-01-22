@@ -1,4 +1,4 @@
-name: Build nuScr (macOS x64)
+name: Build nuScr (macOS x64, portable)
 
 on:
   workflow_dispatch:
@@ -31,20 +31,45 @@ jobs:
           opam pin add nuscr . -n
           opam install nuscr --deps-only -y
 
-      - name: Build nuScr CLI (macOS x64)
+      - name: Build nuScr CLI (portable)
         run: |
           eval $(opam env)
           cd nuscr
+
+          # --- HARD BLOCK HOMEBREW ---
+          unset HOMEBREW_PREFIX
+          unset HOMEBREW_CELLAR
+          unset HOMEBREW_REPOSITORY
+          unset LIBRARY_PATH
+          unset CPATH
+          unset C_INCLUDE_PATH
+          unset CPLUS_INCLUDE_PATH
+          unset DYLD_LIBRARY_PATH
+          unset DYLD_FALLBACK_LIBRARY_PATH
+          unset PKG_CONFIG_PATH
+
           dune build bin/main.exe
 
-      - name: Verify nuScr binary
+          # Rename to final name
+          mv _build/default/bin/main.exe _build/default/bin/nuscr
+          chmod +x _build/default/bin/nuscr
+
+      - name: Verify binary is Intel macOS
         run: |
-          eval $(opam env)
-          file nuscr/_build/default/bin/main.exe
-          arch -x86_64 nuscr/_build/default/bin/main.exe --help
+          file nuscr/_build/default/bin/nuscr
+          arch -x86_64 nuscr/_build/default/bin/nuscr --help
+
+      - name: Verify NO Homebrew dylibs are linked
+        run: |
+          otool -L nuscr/_build/default/bin/nuscr | tee otool.txt
+          if grep -E "/usr/local/opt|/opt/homebrew" otool.txt; then
+            echo "❌ Homebrew dylib detected — build is NOT portable"
+            exit 1
+          fi
+          echo "✅ Binary is portable"
 
       - name: Upload nuScr macOS x64 binary
         uses: actions/upload-artifact@v4
         with:
           name: nuscr-macos-x64
-          path: nuscr/_build/default/bin/main.exe
+          path: nuscr/_build/default/bin/nuscr
