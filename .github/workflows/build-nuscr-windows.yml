@@ -1,63 +1,51 @@
-name: Package nuscr (Windows)
+name: Build nuscr Windows binary
 
 on:
   push:
   workflow_dispatch:
 
 jobs:
-  build-windows:
+  build-nuscr-win:
     runs-on: windows-latest
 
     steps:
-      # 1. Checkout packaging repo
-      - uses: actions/checkout@v4
+      - name: Checkout this repo
+        uses: actions/checkout@v4
 
-      # 2. Checkout nuscr
+      # Check out the nuscr repo into a subfolder
       - name: Checkout nuscr
         uses: actions/checkout@v4
         with:
-          repository: nuscr/nuscr
-          ref: develop
+          repository: nuscr/nuscr       # upstream repo
+          ref: develop                  # or a tag like "2.1.1"
           path: nuscr
 
-      # 3. Set up OCaml + opam
-      - name: Set up OCaml
+      - name: Set up OCaml + opam
         uses: ocaml/setup-ocaml@v3
         with:
-          ocaml-compiler: 5.1.1
+          ocaml-compiler: '5.3.0'       # nuscr supports OCaml >= 4.10; 5.3 works fine
 
-      # 4. Build nuscr
-      - name: Build nuscr
+      - name: Build nuscr and copy Windows binary
         shell: pwsh
         working-directory: nuscr
         run: |
-          # Create and activate switch
-          opam switch create nuscr-switch ocaml.5.1.1
+          # Activate opam environment for this shell
           (& opam env) -split '\r?\n' | ForEach-Object { Invoke-Expression $_ }
 
-          # Pin ALL local packages (CRITICAL)
-          opam pin add . --recursive -y
+          # Pin only the 'nuscr' package to this directory (ignore nuscr-web)
+          opam pin add nuscr . --with-version=dev -y
 
-          # Install dependencies
-          opam install . --deps-only -y
+          # Install nuscr (this installs all its deps and runs 'dune build -p nuscr @install')
+          opam install nuscr -y
 
-          # Install dune and refresh PATH
-          opam install dune -y
+          # Refresh env so the installed tools/bin path is in PATH
           (& opam env) -split '\r?\n' | ForEach-Object { Invoke-Expression $_ }
 
-          # Build
-          dune build
+          # Copy the installed Windows binary into the main workspace
+          Copy-Item "$env:OPAM_SWITCH_PREFIX\bin\nuscr.exe" "$env:GITHUB_WORKSPACE\nuscr-windows.exe"
 
-      # 5. Package binary
-      - name: Package Windows binary
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Force -Path package
-          Copy-Item nuscr\_build\default\bin\nuscr.exe package\
-
-      # 6. Upload artifact
-      - name: Upload artifact
+      - name: Upload nuscr.exe as artifact
         uses: actions/upload-artifact@v4
         with:
           name: nuscr-windows
-          path: package/nuscr.exe
+          path: nuscr-windows.exe
