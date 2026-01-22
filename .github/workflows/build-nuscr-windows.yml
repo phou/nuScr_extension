@@ -1,47 +1,63 @@
 name: Package nuscr (Windows)
 
 on:
-  workflow_dispatch:
   push:
+  workflow_dispatch:
 
 jobs:
   build-windows:
     runs-on: windows-latest
 
     steps:
-      # Checkout the packaging repo
+      # 1. Checkout the packaging repo (this repo)
       - name: Checkout packaging repo
         uses: actions/checkout@v4
 
-      # Checkout nuscr into ./nuscr
+      # 2. Checkout nuscr into a subdirectory
       - name: Checkout nuscr
         uses: actions/checkout@v4
         with:
           repository: nuscr/nuscr
           path: nuscr
+          # optionally pin a version:
+          # ref: v0.3.2
 
-      # Set up OCaml
+      # 3. Set up OCaml + opam
       - name: Set up OCaml
         uses: ocaml/setup-ocaml@v3
         with:
           ocaml-compiler: 5.1.1
 
-      # Build nuscr
+      # 4. Build nuscr
       - name: Build nuscr
         working-directory: nuscr
+        shell: pwsh
         run: |
+          # Make sure opam env is active
+          opam env --switch=default --set-switch | Invoke-Expression
+
+          # Pin the local repo so internal packages resolve
+          opam pin add nuscr . -y --no-action
+
+          # Install dependencies
           opam install . --deps-only -y
+
+          # Ensure dune is available
+          opam install dune -y
+
+          # Build
           dune build
 
-      # Package the binary
-      - name: Package Windows binary
+      # 5. Package the Windows binary
+      - name: Package binary
+        shell: pwsh
         run: |
-          mkdir package
-          copy nuscr\_build\default\bin\nuscr.exe package\
+          New-Item -ItemType Directory -Force -Path package
+          Copy-Item nuscr\_build\default\bin\nuscr.exe package\
 
-      # Upload artifact
+      # 6. Upload artifact
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: nuscr-windows
-          path: package
+          path: package/nuscr.exe
