@@ -19,11 +19,15 @@ jobs:
         with:
           ocaml-compiler: "5.1.1"
 
+      - name: Install Homebrew zstd (build-time only)
+        run: |
+          brew install zstd
+
       - name: Clone nuScr
         run: |
           git clone https://github.com/nuscr/nuscr.git
 
-      - name: Install nuScr CLI dependencies only
+      - name: Install nuScr CLI dependencies
         run: |
           eval $(opam env)
           cd nuscr
@@ -31,45 +35,61 @@ jobs:
           opam pin add nuscr . -n
           opam install nuscr --deps-only -y
 
-      - name: Build nuScr CLI (portable)
+      - name: Build nuScr CLI (macOS x64)
         run: |
           eval $(opam env)
           cd nuscr
-
-          # --- HARD BLOCK HOMEBREW ---
-          unset HOMEBREW_PREFIX
-          unset HOMEBREW_CELLAR
-          unset HOMEBREW_REPOSITORY
-          unset LIBRARY_PATH
-          unset CPATH
-          unset C_INCLUDE_PATH
-          unset CPLUS_INCLUDE_PATH
-          unset DYLD_LIBRARY_PATH
-          unset DYLD_FALLBACK_LIBRARY_PATH
-          unset PKG_CONFIG_PATH
-
           dune build bin/main.exe
 
-          # Rename to final name
+          # Rename executable
           mv _build/default/bin/main.exe _build/default/bin/nuscr
           chmod +x _build/default/bin/nuscr
 
-      - name: Verify binary is Intel macOS
+      - name: Bundle libzstd
+        run: |
+          cd nuscr/_build/default/bin
+
+          ZSTD_LIB="$(brew --prefix zstd)/lib/libzstd.1.dylib"
+          cp "$ZSTD_LIB" .
+
+          # Rewrite load path to @rpath
+          install_name_tool \
+            -change /usr/local/opt/zstd/lib/libzstd.1.dylib \
+                    @rpath/libzstd.1.dylib \
+            nuscr
+
+          # Add rpath to executable directory
+          install_name_tool \
+            -add_rpath @executable_path \
+            nuscr
+
+      - name: Verify portable binary
         run: |
           file nuscr/_build/default/bin/nuscr
           arch -x86_64 nuscr/_build/default/bin/nuscr --help
 
-      - name: Verify NO Homebrew dylibs are linked
-        run: |
+          echo "Linked libraries:"
           otool -L nuscr/_build/default/bin/nuscr | tee otool.txt
+
           if grep -E "/usr/local/opt|/opt/homebrew" otool.txt; then
-            echo "❌ Homebrew dylib detected — build is NOT portable"
+            echo "❌ Homebrew dylib path detected — build is NOT portable"
             exit 1
           fi
+
+          if ! grep -q "@rpath/libzstd.1.dylib" otool.txt; then
+            echo "❌ libzstd not properly bundled"
+            exit 1
+          fi
+
           echo "✅ Binary is portable"
 
-      - name: Upload nuScr macOS x64 binary
+      - name: Package artifact
+        run: |
+          cd nuscr/_build/default/bin
+          zip -r nuscr-2.1.1-macos-x64.zip nuscr libzstd.1.dylib
+
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: nuscr-macos-x64
-          path: nuscr/_build/default/bin/nuscr
+          path: nuscr/_build/default/bin/nuscr-2.1.1-macos-x64.zip
