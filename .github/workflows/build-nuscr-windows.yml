@@ -12,18 +12,24 @@ jobs:
       - name: Checkout this repo
         uses: actions/checkout@v4
 
-      # Check out the nuscr repo into a subfolder
+      # Checkout the nuscr repo into ./nuscr
       - name: Checkout nuscr
         uses: actions/checkout@v4
         with:
-          repository: nuscr/nuscr       # upstream repo
-          ref: develop                  # or a tag like "2.1.1"
+          repository: nuscr/nuscr
+          ref: develop          # or a tag like "2.1.1" if you prefer
           path: nuscr
 
       - name: Set up OCaml + opam
         uses: ocaml/setup-ocaml@v3
         with:
-          ocaml-compiler: '5.3.0'       # nuscr supports OCaml >= 4.10; 5.3 works fine
+          ocaml-compiler: '5.3.0'
+
+      # NEW: install protoc so conf-protoc can succeed
+      - name: Install protoc (Protocol Buffers compiler)
+        shell: pwsh
+        run: |
+          choco install protoc -y
 
       - name: Build nuscr and copy Windows binary
         shell: pwsh
@@ -35,14 +41,15 @@ jobs:
           # Pin only the 'nuscr' package to this directory (ignore nuscr-web)
           opam pin add nuscr . --with-version=dev -y
 
-          # Install nuscr (this installs all its deps and runs 'dune build -p nuscr @install')
+          # Install nuscr (installs deps and runs dune build -p nuscr @install)
           opam install nuscr -y
 
-          # Refresh env so the installed tools/bin path is in PATH
+          # Refresh env so installed bin/ is on PATH
           (& opam env) -split '\r?\n' | ForEach-Object { Invoke-Expression $_ }
 
           # Copy the installed Windows binary into the main workspace
-          Copy-Item "$env:OPAM_SWITCH_PREFIX\bin\nuscr.exe" "$env:GITHUB_WORKSPACE\nuscr-windows.exe"
+          Copy-Item "$env:OPAM_SWITCH_PREFIX\bin\nuscr.exe" `
+                    "$env:GITHUB_WORKSPACE\nuscr-windows.exe"
 
       - name: Upload nuscr.exe as artifact
         uses: actions/upload-artifact@v4
