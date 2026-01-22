@@ -188,6 +188,23 @@ If you just want a reliable setup, we recommend:
 
 ---
 
+## “Open in nuScr Live” (clipboard & privacy)
+
+The command **“Open protocol in nuScr Live”** works like this:
+
+1. It **copies the current protocol text to your clipboard**.
+2. It **opens the nuScr Live web application** in your browser.
+3. You then **paste the protocol manually** into nuScr Live using:
+   - `Cmd+V` (macOS), or  
+   - `Ctrl+V` (Windows / Linux).
+
+Important details:
+
+- The extension **does not automatically upload your file** to nuScr Live.
+- Your protocol leaves VS Code **only if you paste it** into the web page.
+
+---
+
 ## Troubleshooting
 
 ### “No prebuilt Windows binary is provided”
