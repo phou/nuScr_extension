@@ -5,11 +5,10 @@ on:
   push:
     tags:
       - "nuscr-*"
-  pull_request:
 
 jobs:
   build-nuscr-macos-x64:
-    runs-on: macos-14-large   # ✅ Intel macOS runner
+    runs-on: macos-14-large   # Intel macOS runner (paid)
 
     steps:
       - name: Checkout extension repo
@@ -31,13 +30,15 @@ jobs:
 
       - name: Build nuScr (macOS x64)
         run: |
+          eval $(opam env)
           cd nuscr
           dune build
 
-      - name: Verify binary architecture
+      - name: Verify nuScr binary
         run: |
+          eval $(opam env)
           file nuscr/_build/default/bin/nuscr
-          nuscr/_build/default/bin/nuscr --help
+          arch -x86_64 nuscr/_build/default/bin/nuscr --help
 
       - name: Upload nuScr macOS x64 binary
         uses: actions/upload-artifact@v4
