@@ -40,11 +40,11 @@ jobs:
       - name: Verify nuScr binary
         run: |
           eval $(opam env)
-          file nuscr/_build/default/bin/nuscr
-          arch -x86_64 nuscr/_build/default/bin/nuscr --help
+          file nuscr/_build/default/bin/main.exe
+          arch -x86_64 nuscr/_build/default/bin/main.exe --help
 
       - name: Upload nuScr macOS x64 binary
         uses: actions/upload-artifact@v4
         with:
           name: nuscr-macos-x64
-          path: nuscr/_build/default/bin/nuscr
+          path: nuscr/_build/default/bin/main.exe
