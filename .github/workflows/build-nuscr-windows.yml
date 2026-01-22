@@ -1,0 +1,47 @@
+name: Package nuscr (Windows)
+
+on:
+  workflow_dispatch:
+  push:
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+      # Checkout the packaging repo
+      - name: Checkout packaging repo
+        uses: actions/checkout@v4
+
+      # Checkout nuscr into ./nuscr
+      - name: Checkout nuscr
+        uses: actions/checkout@v4
+        with:
+          repository: nuscr/nuscr
+          path: nuscr
+
+      # Set up OCaml
+      - name: Set up OCaml
+        uses: ocaml/setup-ocaml@v3
+        with:
+          ocaml-compiler: 5.1.1
+
+      # Build nuscr
+      - name: Build nuscr
+        working-directory: nuscr
+        run: |
+          opam install . --deps-only -y
+          dune build
+
+      # Package the binary
+      - name: Package Windows binary
+        run: |
+          mkdir package
+          copy nuscr\_build\default\bin\nuscr.exe package\
+
+      # Upload artifact
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: nuscr-windows
+          path: package
